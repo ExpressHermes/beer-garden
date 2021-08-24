@@ -49,9 +49,14 @@ class StompManager(BaseProcessor):
             None
         """
         if name in self.conn_dict:
+            logger.debug(f"Attempting to add {name}, already in conn_dict")
+
             if garden_name not in self.conn_dict[name]["gardens"]:
+                logger.debug(f"Appending {garden_name} to {name} gardens list")
                 self.conn_dict[name]["gardens"].append(garden_name)
         else:
+            logger.debug(f"Creating new connection {name}")
+
             conn = Connection(
                 host=stomp_config.get("host"),
                 port=stomp_config.get("port"),
