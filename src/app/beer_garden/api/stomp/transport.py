@@ -1,7 +1,7 @@
 import logging
 from random import choice
 from string import ascii_letters
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 import certifi
 import stomp
@@ -61,22 +61,46 @@ def process(body) -> Tuple[str, dict]:
     return body, {"model_class": model_class, "many": many}
 
 
-def parse_header_list(headers: str) -> Dict[str, str]:
-    """Convert a header list (from config, db) into a header dictionary"""
+def parse_header_list(headers: Union[str, List[Dict[str, str]]]) -> Dict[str, str]:
+    """Convert a header list (from config, db) into a header dictionary
+
+    Headers are stored in the DB like this:
+    headers: [
+        {"key": "a", "value": "b"},
+        {"key": "c", "value": "d"},
+    ]
+
+    Headers come in from the config file like this:
+    [
+        "{'parent.stomp.headers.key': 'a', 'parent.stomp.headers.value': 'b'}",
+        "{'parent.stomp.headers.key': 'c', 'parent.stomp.headers.value': 'd'}"
+    ]
+
+    In both cases the return value should look like this:
+    { "a": "b", "c": "d" }
+
+    """
     tmp_headers = {}
-    key_to_key = None
-    key_to_value = None
 
-    for header in headers:
-        header = eval(header)
+    for val in headers:
+        if type(val) == dict:
+            tmp_headers[val["key"]] = val["value"]
 
-        for key in header.keys():
-            if "key" in key:
-                key_to_key = key
-            elif "value" in key:
-                key_to_value = key
+        elif type(val) == str:
+            # Yes, this is not good
+            header = eval(val)
 
-        tmp_headers[header[key_to_key]] = header[key_to_value]
+            tmp_key = None
+            tmp_val = None
+
+            for k, v in header.items():
+                if "key" in k:
+                    tmp_key = v
+                else:
+                    tmp_val = v
+
+            if tmp_key and tmp_val:
+                tmp_headers[tmp_key] = tmp_val
 
     return tmp_headers
 

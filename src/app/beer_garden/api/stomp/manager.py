@@ -65,16 +65,11 @@ class StompManager(BaseProcessor):
                 )
                 conn.connect()
 
-                self.conn_dict[name] = {"conn": conn, "gardens": [garden_name]}
-
-            if "headers_list" not in self.conn_dict:
-                self.conn_dict[name]["headers_list"] = []
-
-            if stomp_config.get("headers"):
-                headers = parse_header_list(stomp_config.get("headers"))
-
-                if headers not in self.conn_dict[name]["headers_list"]:
-                    self.conn_dict[name]["headers_list"].append(headers)
+                self.conn_dict[name] = {
+                    "conn": conn,
+                    "gardens": [garden_name],
+                    "headers": parse_header_list(stomp_config.get("headers")),
+                }
 
     def run(self):
         while not self.stopped():
@@ -129,15 +124,11 @@ class StompManager(BaseProcessor):
 
                 self.add_connection(stomp_config=stomp_config, name=event.payload.name)
 
-        for value in self.conn_dict.values():
-            conn = value["conn"]
-            if conn:
-                if conn.is_connected():
-                    if value["headers_list"]:
-                        for headers in value["headers_list"]:
-                            conn.send(event, headers=headers)
-                    else:
-                        conn.send(event)
+        # Send events to the Connection's send_destination
+        for connection_dict in self.conn_dict.values():
+            conn = connection_dict["conn"]
+            if conn and conn.is_connected():
+                conn.send(event, headers=connection_dict.get("headers"))
 
     def handle_event(self, event):
         """Main event entry point
