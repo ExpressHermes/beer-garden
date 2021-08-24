@@ -67,12 +67,12 @@ class StompManager(BaseProcessor):
             conn_dict_key = f"{host_and_ports}{subscribe_destination}{use_ssl}"
 
             if conn_dict_key in self.conn_dict:
-                if {"name": name} not in self.conn_dict[conn_dict_key]["gardens"]:
-                    self.conn_dict[conn_dict_key]["gardens"].append({"name": name})
+                if name not in self.conn_dict[conn_dict_key]["gardens"]:
+                    self.conn_dict[conn_dict_key]["gardens"].append(name)
             else:
                 self.conn_dict[conn_dict_key] = {
                     "conn": self.connect(stomp_config),
-                    "gardens": [{"name": name}],
+                    "gardens": [name],
                 }
 
             if "headers_list" not in self.conn_dict:
@@ -111,13 +111,11 @@ class StompManager(BaseProcessor):
         """removes garden name from dict list of gardens for stomp subscriptions"""
         for key in list(self.conn_dict):
             if not key == skip_key:
-                gardens = self.conn_dict[key]["gardens"]
+                if garden_name in self.conn_dict[key]["gardens"]:
+                    self.conn_dict[key]["gardens"].remove(garden_name)
 
-                for garden in gardens:
-                    if garden_name == garden["name"]:
-                        gardens.remove(garden)
-
-                if not gardens:
+                # If the list of gardens reachable is now empty, disconnect and remove
+                if not self.conn_dict[key]["gardens"]:
                     self.conn_dict[key]["conn"].disconnect()
                     self.conn_dict.pop(key)
 
