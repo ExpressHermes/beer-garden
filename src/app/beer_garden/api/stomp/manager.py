@@ -6,6 +6,7 @@ from brewtils.models import Event, Events
 import beer_garden.log
 import beer_garden.requests
 import beer_garden.router
+import beer_garden.config as config
 from beer_garden.api.stomp.transport import Connection, parse_header_list
 from beer_garden.events import publish
 from beer_garden.events.processors import BaseProcessor
@@ -96,17 +97,16 @@ class StompManager(BaseProcessor):
             ),
         )
 
-    def remove_garden_from_list(self, garden_name=None, skip_key=None):
+    def remove_garden_from_list(self, garden_name=None):
         """removes garden name from dict list of gardens for stomp subscriptions"""
         for key in list(self.conn_dict):
-            if not key == skip_key:
-                if garden_name in self.conn_dict[key]["gardens"]:
-                    self.conn_dict[key]["gardens"].remove(garden_name)
+            if garden_name in self.conn_dict[key]["gardens"]:
+                self.conn_dict[key]["gardens"].remove(garden_name)
 
-                # If the list of gardens reachable is now empty, disconnect and remove
-                if not self.conn_dict[key]["gardens"]:
-                    self.conn_dict[key]["conn"].disconnect()
-                    self.conn_dict.pop(key)
+            # If the list of gardens reachable is now empty, disconnect and remove
+            if not self.conn_dict[key]["gardens"]:
+                self.conn_dict[key]["conn"].disconnect()
+                self.conn_dict.pop(key)
 
     def _event_handler(self, event):
         """Internal event handler"""
@@ -114,21 +114,20 @@ class StompManager(BaseProcessor):
             if event.name == Events.GARDEN_REMOVED.name:
                 self.remove_garden_from_list(garden_name=event.payload.name)
 
-            elif event.name == Events.GARDEN_UPDATED.name:
-                skip_key = None
+            elif (
+                event.name == Events.GARDEN_UPDATED.name
+                and event.garden == config.get("garden.name")
+                and event.payload.connection_type
+                and event.payload.connection_type.casefold() == "stomp"
+            ):
+                self.remove_garden_from_list(garden_name=event.payload.name)
 
-                if event.payload.connection_type:
-                    if event.payload.connection_type.casefold() == "stomp":
-                        stomp_config = event.payload.connection_params.get("stomp", {})
-                        stomp_config = deepcopy(stomp_config)
-                        stomp_config["send_destination"] = None
-                        skip_key = self.add_connection(
-                            stomp_config=stomp_config, name=event.payload.name
-                        )
-
-                self.remove_garden_from_list(
-                    garden_name=event.payload.name, skip_key=skip_key
+                stomp_config = deepcopy(
+                    event.payload.connection_params.get("stomp", {})
                 )
+                stomp_config["send_destination"] = None
+
+                self.add_connection(stomp_config=stomp_config, name=event.payload.name)
 
         for value in self.conn_dict.values():
             conn = value["conn"]
