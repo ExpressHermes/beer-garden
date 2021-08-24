@@ -48,28 +48,26 @@ class StompManager(BaseProcessor):
         Returns:
             None
         """
-        if stomp_config.get("subscribe_destination"):
+        if name in self.conn_dict:
+            if garden_name not in self.conn_dict[name]["gardens"]:
+                self.conn_dict[name]["gardens"].append(garden_name)
+        else:
+            conn = Connection(
+                host=stomp_config.get("host"),
+                port=stomp_config.get("port"),
+                send_destination=stomp_config.get("send_destination"),
+                subscribe_destination=stomp_config.get("subscribe_destination"),
+                ssl=stomp_config.get("ssl"),
+                username=stomp_config.get("username"),
+                password=stomp_config.get("password"),
+            )
+            conn.connect()
 
-            if name in self.conn_dict:
-                if garden_name not in self.conn_dict[name]["gardens"]:
-                    self.conn_dict[name]["gardens"].append(garden_name)
-            else:
-                conn = Connection(
-                    host=stomp_config.get("host"),
-                    port=stomp_config.get("port"),
-                    send_destination=stomp_config.get("send_destination"),
-                    subscribe_destination=stomp_config.get("subscribe_destination"),
-                    ssl=stomp_config.get("ssl"),
-                    username=stomp_config.get("username"),
-                    password=stomp_config.get("password"),
-                )
-                conn.connect()
-
-                self.conn_dict[name] = {
-                    "conn": conn,
-                    "gardens": [garden_name],
-                    "headers": parse_header_list(stomp_config.get("headers")),
-                }
+            self.conn_dict[name] = {
+                "conn": conn,
+                "gardens": [garden_name],
+                "headers": parse_header_list(stomp_config.get("headers")),
+            }
 
     def run(self):
         while not self.stopped():
