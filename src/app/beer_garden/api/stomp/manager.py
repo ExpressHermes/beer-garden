@@ -1,7 +1,6 @@
-import logging
 from copy import deepcopy
 
-from box import Box
+import logging
 from brewtils.models import Event, Events
 
 import beer_garden.log
@@ -24,27 +23,6 @@ class StompManager(BaseProcessor):
     events across the multiprocessing.Connection.
 
     """
-
-    @staticmethod
-    def connect(stomp_config: Box) -> Connection:
-        """Create and return a stomp connection"""
-
-        conn = Connection(
-            host=stomp_config.get("host"),
-            port=stomp_config.get("port"),
-            send_destination=stomp_config.get("send_destination"),
-            subscribe_destination=stomp_config.get("subscribe_destination"),
-            ssl=stomp_config.get("ssl"),
-            username=stomp_config.get("username"),
-            password=stomp_config.get("password"),
-        )
-
-        if conn.connect():
-            logger.info("Successfully connected")
-        else:
-            logger.info("Failed to connect")
-
-        return conn
 
     def __init__(self, ep_conn):
         super().__init__(
@@ -70,10 +48,18 @@ class StompManager(BaseProcessor):
                 if name not in self.conn_dict[conn_dict_key]["gardens"]:
                     self.conn_dict[conn_dict_key]["gardens"].append(name)
             else:
-                self.conn_dict[conn_dict_key] = {
-                    "conn": self.connect(stomp_config),
-                    "gardens": [name],
-                }
+                conn = Connection(
+                    host=stomp_config.get("host"),
+                    port=stomp_config.get("port"),
+                    send_destination=stomp_config.get("send_destination"),
+                    subscribe_destination=stomp_config.get("subscribe_destination"),
+                    ssl=stomp_config.get("ssl"),
+                    username=stomp_config.get("username"),
+                    password=stomp_config.get("password"),
+                )
+                conn.connect()
+
+                self.conn_dict[conn_dict_key] = {"conn": conn, "gardens": [name]}
 
             if "headers_list" not in self.conn_dict:
                 self.conn_dict[conn_dict_key]["headers_list"] = []
