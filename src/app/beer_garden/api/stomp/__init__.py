@@ -61,13 +61,14 @@ def run(ep_conn):
 
             if connection:
                 logger.debug(f"{name}: Checking connection")
+
                 if not connection.is_connected():
-                    logger.debug(f"{name}: Attempting to reconnect")
+                    logger.warning(f"{name}: Attempting to reconnect")
 
                     if connection.connect():
-                        logger.debug(f"{name}: Reconnect successful")
+                        logger.warning(f"{name}: Reconnect successful")
                     else:
-                        logger.debug(f"{name}: Reconnect failed")
+                        logger.warning(f"{name}: Reconnect failed")
 
     conn_manager.shutdown()
     conn_manager.stop()
