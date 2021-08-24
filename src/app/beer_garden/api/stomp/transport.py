@@ -210,8 +210,6 @@ class Connection:
                 username=self.username,
                 passcode=self.password,
                 wait=True,
-                # This is needed if the subscribe to a durable topic
-                # headers={"client-id": ?},
             )
 
             if self.subscribe_destination:
@@ -223,11 +221,6 @@ class Connection:
                     destination=self.subscribe_destination,
                     id="".join([choice(ascii_letters) for _ in range(10)]),
                     ack="auto",
-                    # These are needed if the subscribe to a durable topic
-                    # headers={
-                    #     "subscription-type": "MULTICAST",
-                    #     "durable-subscription-name": self.subscribe_destination,
-                    # },
                 )
 
             # This is probably always True at this point, but just to be safe
