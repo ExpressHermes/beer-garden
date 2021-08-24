@@ -35,13 +35,19 @@ def run(ep_conn):
         conn_manager.add_connection(stomp_config=parent_config, name=f"parent")
 
     for garden in get_gardens(include_local=False):
-        if garden.name != garden_name and garden.connection_type:
-            if garden.connection_type.casefold() == "stomp":
-                connection_params = garden.connection_params.get("stomp", {})
-                connection_params["send_destination"] = None
-                conn_manager.add_connection(
-                    stomp_config=connection_params, name=garden.name
-                )
+        if (
+            garden.name != garden_name
+            and garden.connection_type
+            and garden.connection_type.casefold() == "stomp"
+        ):
+            conn_params = garden.connection_params.get("stomp", {})
+
+            # Garden connections should never be sending anything
+            conn_params["send_destination"] = None
+
+            conn_manager.add_connection(
+                stomp_config=conn_params, name=garden.name, garden_name=garden.name
+            )
 
     conn_manager.start()
 

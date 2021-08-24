@@ -34,19 +34,24 @@ class StompManager(BaseProcessor):
         self.conn_dict = {}
         self.ep_conn = ep_conn
 
-    def add_connection(self, stomp_config=None, name=None):
+    def add_connection(
+        self, stomp_config=None, name: str = None, garden_name: str = None
+    ) -> None:
+        """Adds a connection
+
+        Args:
+            stomp_config: The connection configuration
+            name: The connection name
+            garden_name: The garden reachable using this connection
+
+        Returns:
+            None
+        """
         if stomp_config.get("subscribe_destination"):
-            host_and_ports = [(stomp_config.get("host"), stomp_config.get("port"))]
-            subscribe_destination = stomp_config.get("subscribe_destination")
 
-            ssl = stomp_config.get("ssl") or {}
-            use_ssl = ssl.get("use_ssl") or False
-
-            conn_dict_key = f"{host_and_ports}{subscribe_destination}{use_ssl}"
-
-            if conn_dict_key in self.conn_dict:
-                if name not in self.conn_dict[conn_dict_key]["gardens"]:
-                    self.conn_dict[conn_dict_key]["gardens"].append(name)
+            if name in self.conn_dict:
+                if garden_name not in self.conn_dict[name]["gardens"]:
+                    self.conn_dict[name]["gardens"].append(garden_name)
             else:
                 conn = Connection(
                     host=stomp_config.get("host"),
@@ -59,18 +64,16 @@ class StompManager(BaseProcessor):
                 )
                 conn.connect()
 
-                self.conn_dict[conn_dict_key] = {"conn": conn, "gardens": [name]}
+                self.conn_dict[name] = {"conn": conn, "gardens": [garden_name]}
 
             if "headers_list" not in self.conn_dict:
-                self.conn_dict[conn_dict_key]["headers_list"] = []
+                self.conn_dict[name]["headers_list"] = []
 
             if stomp_config.get("headers"):
                 headers = parse_header_list(stomp_config.get("headers"))
 
-                if headers not in self.conn_dict[conn_dict_key]["headers_list"]:
-                    self.conn_dict[conn_dict_key]["headers_list"].append(headers)
-
-            return conn_dict_key
+                if headers not in self.conn_dict[name]["headers_list"]:
+                    self.conn_dict[name]["headers_list"].append(headers)
 
     def run(self):
         while not self.stopped():
