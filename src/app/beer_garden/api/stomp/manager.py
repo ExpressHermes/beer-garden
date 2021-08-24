@@ -94,13 +94,15 @@ class StompManager(BaseProcessor):
 
     def remove_garden_from_list(self, garden_name=None):
         """removes garden name from dict list of gardens for stomp subscriptions"""
-        for key in list(self.conn_dict):
-            if garden_name in self.conn_dict[key]["gardens"]:
-                self.conn_dict[key]["gardens"].remove(garden_name)
+        for key, value in self.conn_dict.items():
+            if garden_name in value["gardens"]:
+                logger.debug(f"Removing garden {garden_name} from connection {key}")
+                value["gardens"].remove(garden_name)
 
             # If the list of gardens reachable is now empty, disconnect and remove
-            if not self.conn_dict[key]["gardens"]:
-                self.conn_dict[key]["conn"].disconnect()
+            if not value["gardens"]:
+                logger.debug(f"Garden list for {key} is empty, disconnecting")
+                value["conn"].disconnect()
                 self.conn_dict.pop(key)
 
     def _event_handler(self, event):
@@ -115,6 +117,7 @@ class StompManager(BaseProcessor):
                 and event.payload.connection_type
                 and event.payload.connection_type.casefold() == "stomp"
             ):
+                logger.debug(f"Garden update: {event.payload.name}")
                 self.remove_garden_from_list(garden_name=event.payload.name)
 
                 stomp_config = deepcopy(
