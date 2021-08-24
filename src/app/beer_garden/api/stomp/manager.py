@@ -56,7 +56,7 @@ class StompManager(BaseProcessor):
         self.conn_dict = {}
         self.ep_conn = ep_conn
 
-    def add_connection(self, stomp_config=None, name=None, is_main=False):
+    def add_connection(self, stomp_config=None, name=None):
         if stomp_config.get("subscribe_destination"):
             host_and_ports = [(stomp_config.get("host"), stomp_config.get("port"))]
             subscribe_destination = stomp_config.get("subscribe_destination")
@@ -67,22 +67,18 @@ class StompManager(BaseProcessor):
             conn_dict_key = f"{host_and_ports}{subscribe_destination}{use_ssl}"
 
             if conn_dict_key in self.conn_dict:
-                if {"name": name, "main": is_main} not in self.conn_dict[conn_dict_key][
-                    "gardens"
-                ]:
-                    self.conn_dict[conn_dict_key]["gardens"].append(
-                        {"name": name, "main": is_main}
-                    )
+                if {"name": name} not in self.conn_dict[conn_dict_key]["gardens"]:
+                    self.conn_dict[conn_dict_key]["gardens"].append({"name": name})
             else:
                 self.conn_dict[conn_dict_key] = {
                     "conn": self.connect(stomp_config),
-                    "gardens": [{"name": name, "main": is_main}],
+                    "gardens": [{"name": name}],
                 }
 
             if "headers_list" not in self.conn_dict:
                 self.conn_dict[conn_dict_key]["headers_list"] = []
 
-            if stomp_config.get("headers") and is_main:
+            if stomp_config.get("headers"):
                 headers = parse_header_list(stomp_config.get("headers"))
 
                 if headers not in self.conn_dict[conn_dict_key]["headers_list"]:
@@ -118,7 +114,7 @@ class StompManager(BaseProcessor):
                 gardens = self.conn_dict[key]["gardens"]
 
                 for garden in gardens:
-                    if garden_name == garden["name"] and not garden["main"]:
+                    if garden_name == garden["name"]:
                         gardens.remove(garden)
 
                 if not gardens:

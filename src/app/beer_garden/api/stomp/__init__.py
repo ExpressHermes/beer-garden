@@ -29,14 +29,10 @@ def run(ep_conn):
     garden_name = config.get("garden.name")
 
     if entry_config.get("enabled"):
-        conn_manager.add_connection(
-            stomp_config=entry_config, name=f"{garden_name}_entry", is_main=True
-        )
+        conn_manager.add_connection(stomp_config=entry_config, name="entry")
 
     if parent_config.get("enabled"):
-        conn_manager.add_connection(
-            stomp_config=parent_config, name=f"{garden_name}_parent", is_main=True
-        )
+        conn_manager.add_connection(stomp_config=parent_config, name=f"parent")
 
     for garden in get_gardens(include_local=False):
         if garden.name != garden_name and garden.connection_type:
