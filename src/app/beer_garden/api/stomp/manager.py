@@ -133,7 +133,11 @@ class StompManager(BaseProcessor):
                 )
                 stomp_config["send_destination"] = None
 
-                self.add_connection(stomp_config=stomp_config, name=event.payload.name)
+                self.add_connection(
+                    stomp_config=stomp_config,
+                    name=event.payload.name,
+                    garden_name=event.payload.name,
+                )
 
         # Send events to the Connection's send_destination
         for connection_dict in self.conn_dict.values():
