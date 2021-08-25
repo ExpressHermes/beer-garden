@@ -83,10 +83,10 @@ def parse_header_list(headers: Union[str, List[Dict[str, str]]]) -> Dict[str, st
     tmp_headers = {}
 
     for val in headers:
-        if type(val) == dict:
+        if val and type(val) == dict:
             tmp_headers[val["key"]] = val["value"]
 
-        elif type(val) == str:
+        elif val and type(val) == str:
             # Yes, this is not good
             header = eval(val)
 
