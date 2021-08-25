@@ -97,6 +97,8 @@ class StompManager(BaseProcessor):
 
     def remove_garden_from_list(self, garden_name=None):
         """removes garden name from dict list of gardens for stomp subscriptions"""
+        remove_connections = []
+
         for key, value in self.conn_dict.items():
             if garden_name in value["gardens"]:
                 logger.debug(f"Removing garden {garden_name} from connection {key}")
@@ -105,8 +107,11 @@ class StompManager(BaseProcessor):
             # If the list of gardens reachable is now empty, disconnect and remove
             if not value["gardens"]:
                 logger.debug(f"Garden list for {key} is empty, disconnecting")
-                value["conn"].disconnect()
-                self.conn_dict.pop(key)
+                remove_connections.append(key)
+
+        for key in remove_connections:
+            self.conn_dict[key]["conn"].disconnect()
+            self.conn_dict.pop(key)
 
     def _event_handler(self, event):
         """Internal event handler"""
