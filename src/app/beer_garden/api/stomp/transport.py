@@ -129,10 +129,10 @@ class OperationListener(stomp.ConnectionListener):
         self.conn = conn
         self.send_destination = send_destination
 
-    def on_error(self, headers, message):
-        logger.warning(f"Error:\n\tMessage: {message}\n\tHeaders: {headers}")
+    def on_error(self, frame):
+        logger.warning(f"Error:\n\tMessage: {frame.body}\n\tHeaders: {frame.headers}")
 
-    def on_message(self, headers: dict, message: str):
+    def on_message(self, frame):
         """Handle an incoming message
 
         Will first verify that the model type (according to the message headers) is an
@@ -145,17 +145,16 @@ class OperationListener(stomp.ConnectionListener):
         If routing raised an exception an error response will be sent.
 
         Args:
-            headers: Message header dict
-            message: The message body
+            frame: Message frame
 
         Returns:
             None
         """
-        logger.debug(f"Message:\n\tMessage: {message}\n\tHeaders: {headers}")
+        logger.debug(f"Message:\n\tMessage: {frame.body}\n\tHeaders: {frame.headers}")
 
         try:
-            if headers.get("model_class") == "Operation":
-                operation = SchemaParser.parse_operation(message, from_string=True)
+            if frame.headers.get("model_class") == "Operation":
+                operation = SchemaParser.parse_operation(frame.body, from_string=True)
 
                 if hasattr(operation, "kwargs"):
                     operation.kwargs.pop("wait_timeout", None)
@@ -165,7 +164,7 @@ class OperationListener(stomp.ConnectionListener):
                 if result:
                     send(
                         result,
-                        request_headers=headers,
+                        request_headers=frame.headers,
                         conn=self.conn,
                         send_destination=self.send_destination,
                     )
@@ -173,7 +172,7 @@ class OperationListener(stomp.ConnectionListener):
             logger.warning(f"Error parsing and routing message: {e}")
             send(
                 str(e),
-                request_headers=headers,
+                request_headers=frame.headers,
                 conn=self.conn,
                 send_destination=self.send_destination,
             )

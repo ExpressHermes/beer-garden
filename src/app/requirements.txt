@@ -71,7 +71,7 @@ sphinx-rtd-theme==0.5.2   # via -r requirements.in
 sphinx==1.8.5             # via -r requirements.in, sphinx-rtd-theme
 sphinxcontrib-serializinghtml==1.1.5  # via sphinxcontrib-websupport
 sphinxcontrib-websupport==1.2.4  # via sphinx
-stomp.py==6.0.0           # via -r requirements.in
+stomp.py==7.0.0           # via -r requirements.in
 toml==0.10.2              # via pytest
 tomli==1.2.1              # via black
 tornado==6.1              # via -r requirements.in, pytest-tornado
