@@ -31,9 +31,10 @@ def system_spec():
     "easy_client", "parser", "child_easy_client", "request_generator"
 )
 class TestGardenSetup(object):
-    parent_garden_name = "default"
+    # parent_garden_name = "default"
     # parent_garden_name = "docker"
-    child_garden_name = "childdocker"
+    parent_garden_names = ["docker", "default"]
+    child_garden_names = ["childdocker"]
     created_gardens = 0
 
     def _get_gardens(self) -> List[Garden]:
@@ -53,7 +54,7 @@ class TestGardenSetup(object):
     def _get_child_garden(self) -> Garden:
         """Return the garden whose name indicates its a child garden."""
         child = list(
-            filter(lambda x: x.name == self.child_garden_name, self._get_gardens())
+            filter(lambda x: x.name in self.child_garden_names, self._get_gardens())
         )
 
         if len(child) == 0:
@@ -72,22 +73,22 @@ class TestGardenSetup(object):
 
         # partition the gardens on the system
         for garden in gardens:
-            if garden.name == self.parent_garden_name:
+            if garden.name in self.parent_garden_names:
                 parent.append(garden)
-            elif garden.name == self.child_garden_name:
+            elif garden.name in self.child_garden_names:
                 child.append(garden)
             else:
                 other.append(garden)
 
         for garden_list, garden_name, the_client, label in [
-            (parent, self.parent_garden_name, self.easy_client, "parent"),
-            (child, self.child_garden_name, self.child_easy_client, "child"),
+            (parent, self.parent_garden_names, self.easy_client, "parent"),
+            (child, self.child_garden_names, self.child_easy_client, "child"),
         ]:
             if len(garden_list) == 0:
                 # if there is no garden of this type, create one
                 if not the_client.client.session.post(
                     the_client.client.base_url + "api/v1/gardens",
-                    data=self.parser.serialize_garden(Garden(name=garden_name)),
+                    data=self.parser.serialize_garden(Garden(name=garden_name[0])),
                     headers=the_client.client.JSON_HEADERS,
                 ).ok:
                     raise IntegrationTestSetupFailure(
@@ -136,7 +137,7 @@ class TestGardenSetup(object):
         updated_response = self.easy_client.client.session.patch(
             self.easy_client.client.base_url
             + "api/v1/gardens/"
-            + self.child_garden_name,
+            + self.child_garden_names[0],
             data=payload,
             headers=self.easy_client.client.JSON_HEADERS,
         )
@@ -170,7 +171,7 @@ class TestGardenSetup(object):
         response = self.easy_client.client.session.patch(
             self.easy_client.client.base_url
             + "api/v1/gardens/"
-            + self.child_garden_name,
+            + self.child_garden_names[0],
             data=payload,
             headers=self.easy_client.client.JSON_HEADERS,
         )
@@ -192,9 +193,9 @@ class TestGardenSetup(object):
                 namespaces[system.namespace] += 1
 
         print(namespaces)
-        assert (
-            self.child_garden_name in namespaces.keys()
-            and namespaces[self.child_garden_name] > 0
+        assert all(
+            child_garden_name in namespaces.keys() and namespaces[child_garden_name] > 0
+            for child_garden_name in self.child_garden_names
         )
 
     def test_child_request_from_parent(self):
