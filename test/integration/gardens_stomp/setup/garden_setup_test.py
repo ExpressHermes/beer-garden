@@ -31,8 +31,8 @@ def system_spec():
     "easy_client", "parser", "child_easy_client", "request_generator"
 )
 class TestGardenSetup(object):
-    # parent_garden_name = "default"
-    parent_garden_name = "docker"
+    parent_garden_name = "default"
+    # parent_garden_name = "docker"
     child_garden_name = "childdocker"
     created_gardens = 0
 
@@ -81,7 +81,7 @@ class TestGardenSetup(object):
 
         for garden_list, garden_name, the_client, label in [
             (parent, self.parent_garden_name, self.easy_client, "parent"),
-            (child, self.child_garden_name, self.easy_client, "child"),
+            (child, self.child_garden_name, self.child_easy_client, "child"),
         ]:
             if len(garden_list) == 0:
                 # if there is no garden of this type, create one
@@ -94,6 +94,7 @@ class TestGardenSetup(object):
                         f"No {label} garden present and unable to create one"
                     )
                 else:
+                    print(f"created {label} garden")
                     garden_count += 1
             else:
                 garden_count += 1
@@ -156,7 +157,8 @@ class TestGardenSetup(object):
 
         # changed from 2 because we're creating an additional garden in the
         # helper function
-        assert len(gardens) - is_default == self.created_gardens
+        # assert len(gardens) - is_default == self.created_gardens
+        assert len(gardens) == self.created_gardens
 
     def test_run_sync(self):
         # Give BG a second to setup connection

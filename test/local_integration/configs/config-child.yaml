@@ -104,7 +104,7 @@ parent:
   stomp:
     enabled: true
     headers: []
-    host: beer-garden
+    host: activemq
     password: password
     port: 61613
     send_destination: upstream
