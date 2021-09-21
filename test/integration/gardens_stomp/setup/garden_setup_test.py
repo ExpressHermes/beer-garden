@@ -84,13 +84,14 @@ class TestGardenSetup(object):
 
         for garden_list, garden_name, the_client, label in [
             (parent, self.parent_garden_names, self.easy_client, "parent"),
-            (child, self.child_garden_names, self.child_easy_client, "child"),
+            (child, self.child_garden_names, self.easy_client, "child"),
         ]:
             if len(garden_list) == 0:
                 # if there is no garden of this type, create one
+                new_garden_name = garden_name[0]
                 response = the_client.client.session.post(
                     the_client.client.base_url + "api/v1/gardens",
-                    data=self.parser.serialize_garden(Garden(name=garden_name[0])),
+                    data=self.parser.serialize_garden(Garden(name=new_garden_name)),
                     headers=the_client.client.JSON_HEADERS,
                 )
 
@@ -99,7 +100,7 @@ class TestGardenSetup(object):
                         f"No {label} garden present and unable to create one"
                     )
                 else:
-                    print(f"created {label} garden")
+                    print(f"Attempted to create {label} garden")
                     garden_count += 1
             else:
                 garden_count += 1
