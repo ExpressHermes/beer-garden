@@ -54,14 +54,13 @@ class TestGardenSetup(object):
     def _get_child_garden(self) -> Garden:
         """Return the garden whose name indicates its a child garden."""
         gardens = self._get_gardens()
-        garden_names = map(lambda x: x.name, gardens)
-        child = list(
-            filter(lambda x: x in self.child_garden_names, garden_names)
-        )
+        child = list(filter(lambda x: x.name in self.child_garden_names, gardens))
 
         if len(child) == 0:
-            raise IntegrationTestSetupFailure("No child Garden found in: "
-                                              f"{', '.join(garden_names)}")
+            raise IntegrationTestSetupFailure(
+                "No child Garden found in: "
+                f"{', '.join(map(lambda x: x.name, gardens))}"
+            )
         elif len(child) > 1:
             # this normally shouldn't happen in this test environment
             raise IntegrationTestSetupFailure("Multiple child Gardens found")
@@ -89,11 +88,13 @@ class TestGardenSetup(object):
         ]:
             if len(garden_list) == 0:
                 # if there is no garden of this type, create one
-                if not the_client.client.session.post(
+                response = the_client.client.session.post(
                     the_client.client.base_url + "api/v1/gardens",
                     data=self.parser.serialize_garden(Garden(name=garden_name[0])),
                     headers=the_client.client.JSON_HEADERS,
-                ).ok:
+                )
+
+                if not response.ok:
                     raise IntegrationTestSetupFailure(
                         f"No {label} garden present and unable to create one"
                     )
