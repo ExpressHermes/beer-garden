@@ -41,24 +41,6 @@ jobs:
       # If tests fail, should it proceed to print logs
       allow-failure: "[false]"
 
-  Garden-HTTP-Testing:
-    needs: Setup-Release-Info
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: ${{fromJson(needs.Setup-Release-Info.outputs.os-default)}}
-        python-version: ${{fromJson(needs.Setup-Release-Info.outputs.python-default)}}
-        child-garden: ${{fromJson(needs.Setup-Release-Info.outputs.beer-garden-docker-images)}}
-        brewtils: ${{fromJson(needs.Setup-Release-Info.outputs.brewtils-default)}}
-        beer-garden-local: ${{fromJson(needs.Setup-Release-Info.outputs.beer-garden-docker-local-default)}}
-        allow-failure: ${{fromJson(needs.Setup-Release-Info.outputs.allow-failure)}}
-#        For Debugging
-#        child-garden: ${{fromJson(needs.Setup-Release-Info.outputs.beer-garden-docker-remote-default)}}
-      fail-fast: false
-
-
-
   Garden-Stomp-Testing:
     needs: Setup-Release-Info
     runs-on: ${{ matrix.os }}
