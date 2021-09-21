@@ -54,13 +54,14 @@ class TestGardenSetup(object):
     def _get_child_garden(self) -> Garden:
         """Return the garden whose name indicates its a child garden."""
         gardens = self._get_gardens()
+        garden_names = map(lambda x: x.name, gardens)
         child = list(
-            filter(lambda x: x.name in self.child_garden_names, gardens)
+            filter(lambda x: x in self.child_garden_names, garden_names)
         )
 
         if len(child) == 0:
             raise IntegrationTestSetupFailure("No child Garden found in: "
-                                              f"{', '.join(gardens)}")
+                                              f"{', '.join(garden_names)}")
         elif len(child) > 1:
             # this normally shouldn't happen in this test environment
             raise IntegrationTestSetupFailure("Multiple child Gardens found")
