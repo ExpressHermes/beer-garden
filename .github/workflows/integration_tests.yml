@@ -26,7 +26,8 @@ jobs:
       brewtils-default: "['develop']"
 
       # Versions of BG utilized for Parent/Child testing
-      beer-garden-docker-images: "['3.0.5','3.1.1','3.2.3','3','latest','unstable']"
+#      beer-garden-docker-images: "['3.0.5','3.1.1','3.2.3','3','latest','unstable']"
+      beer-garden-docker-images: "['latest']"
 
       # Default Child if in debug mode
       beer-garden-docker-remote-default: "['latest']"

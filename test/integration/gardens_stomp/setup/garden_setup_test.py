@@ -53,12 +53,14 @@ class TestGardenSetup(object):
 
     def _get_child_garden(self) -> Garden:
         """Return the garden whose name indicates its a child garden."""
+        gardens = self._get_gardens()
         child = list(
-            filter(lambda x: x.name in self.child_garden_names, self._get_gardens())
+            filter(lambda x: x.name in self.child_garden_names, gardens)
         )
 
         if len(child) == 0:
-            raise IntegrationTestSetupFailure("No child Garden found")
+            raise IntegrationTestSetupFailure("No child Garden found in: "
+                                              f"{', '.join(gardens)}")
         elif len(child) > 1:
             # this normally shouldn't happen in this test environment
             raise IntegrationTestSetupFailure("Multiple child Gardens found")
@@ -145,11 +147,7 @@ class TestGardenSetup(object):
         assert updated_response.ok
 
     def test_garden_manual_register_successful(self):
-
-        response = self.easy_client.client.session.get(
-            self.easy_client.client.base_url + "api/v1/gardens/"
-        )
-        gardens = self.parser.parse_garden(response.json(), many=True)
+        gardens = self._get_gardens()
 
         # this is a terrible kludge and will be removed once these tests are
         # refactored to be more useful
