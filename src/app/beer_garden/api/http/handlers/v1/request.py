@@ -381,9 +381,23 @@ class RequestListAPI(BaseHandler):
             description: Max seconds to wait for request completion. (-1 = wait forever)
             type: float
             default: -1
+          - name: request_form
+            in: formData
+            required: false
+            description: For Requests that include a file upload as a parameter, use
+              this field in place of the "request" parameter. The input should be json
+              formatted per the definition of the "request" parameter, but supplied as
+              a string.
+            type: string
+          - name: bytes_file
+            in: formData
+            required: false
+            type: file
+            description: A file to upload for use as the data for the "bytes" parameter
         consumes:
           - application/json
           - application/x-www-form-urlencoded
+          - multipart/form-data
         responses:
           201:
             description: A new Request has been created
