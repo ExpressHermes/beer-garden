@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import base64
 import json
 from asyncio import Event
 from typing import Sequence
@@ -9,7 +10,10 @@ from brewtils.schema_parser import SchemaParser
 
 import beer_garden.db.api as db
 from beer_garden.api.http.base_handler import BaseHandler, event_wait
+from beer_garden.api.http.exceptions import BadRequest
+from beer_garden.db.mongo.models import RawFile
 from beer_garden.errors import UnknownGardenException
+from beer_garden.garden import local_garden
 
 
 class RequestAPI(BaseHandler):
@@ -422,6 +426,8 @@ class RequestListAPI(BaseHandler):
             )
         elif self.request.mime_type == "application/x-www-form-urlencoded":
             request_model = self._parse_form_request()
+        elif self.request.mime_type == "multipart/form-data":
+            request_model = self._parse_multipart_form_data()
         else:
             raise ModelValidationError("Unsupported or missing content-type header")
 
@@ -620,3 +626,58 @@ class RequestListAPI(BaseHandler):
         real_hint.append("index")
 
         return "_".join(real_hint)
+
+    def _parse_multipart_form_data(self) -> Request:
+        """Generate a Request object from multipart/form-data input"""
+        request_form = self.get_body_argument("request_form")
+
+        if request_form is None:
+            raise BadRequest(
+                reason="request_form required for multipart/form-data requests"
+            )
+
+        try:
+            request_form_dict = json.loads(request_form)
+        except (json.JSONDecodeError):
+            raise BadRequest(reason="request_form must be a string of valid JSON")
+
+        self._add_files_to_request(request_form_dict)
+
+        return Request(**request_form_dict)
+
+    def _add_files_to_request(self, request_form_dict: dict) -> None:
+        """Processes any files attached to the request and adds them as parameters to
+        the supplied request_form_dict representing the Request object that will be
+        constructed.
+
+        If the target garden for this request is the local garden, this means creating
+        a RawFile object from the file, and then adding a corresponding parameter of
+        type "bytes" that contains the id reference to the RawFile.
+
+        If the target is a remote garden, the file will be still be added as parameter
+        of type "bytes", but no RawFile will be created. Instead, the file is base64
+        encoded and embedded into the parameter under the "base64" field. This allows
+        for transport down the child garden, which will be responsible for creating the
+        RawFile and replacing "base64_encoded_data" with the id reference field on its
+        end.
+        """
+        file_parameters = {}
+        files = self.request.files
+        local_garden_name = local_garden().name
+
+        for _file in files:
+            file_contents = files[_file][0]["body"]
+
+            if request_form_dict["namespace"] == local_garden_name:
+                raw_file = RawFile(file=file_contents).save()
+                file_parameters[_file] = {
+                    "type": "bytes",
+                    "id": str(raw_file.id),
+                }
+            else:
+                file_parameters[_file] = {
+                    "type": "bytes",
+                    "base64": base64.b64encode(file_contents).decode("ascii"),
+                }
+
+        request_form_dict["parameters"].update(file_parameters)

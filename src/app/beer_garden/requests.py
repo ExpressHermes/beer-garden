@@ -7,17 +7,17 @@ The request service is responsible for:
 * Request completion notification
 """
 
+import base64
 import json
 import logging
 import re
 import threading
+from builtins import str
 from typing import Dict, List, Sequence, Union
 
 import pika.spec
 import six
 import urllib3
-
-from beer_garden.errors import NotUniqueException
 from brewtils.choices import parse
 from brewtils.errors import (
     ConflictError,
@@ -25,13 +25,14 @@ from brewtils.errors import (
     RequestPublishException,
     RequestStatusTransitionError,
 )
-from brewtils.models import Choices, Events, Request, RequestTemplate, System, Operation
-from builtins import str
+from brewtils.models import Choices, Events, Operation, Request, RequestTemplate, System
 from requests import Session
 
 import beer_garden.config as config
 import beer_garden.db.api as db
 import beer_garden.queue.api as queue
+from beer_garden.db.mongo.models import RawFile
+from beer_garden.errors import NotUniqueException
 from beer_garden.events import publish_event
 from beer_garden.metrics import request_completed, request_created, request_started
 
@@ -651,7 +652,24 @@ def process_request(
 
 @publish_event(Events.REQUEST_CREATED)
 def create_request(request: Request) -> Request:
+    request = _convert_request_bytes_base64_to_raw_files(request)
+
     return db.create(request)
+
+
+def _convert_request_bytes_base64_to_raw_files(request: Request) -> Request:
+    for param in request.parameters:
+        request_param = request.parameters[param]
+        if isinstance(request_param, dict) and request_param.get("type") == "bytes":
+            bytes_base64 = request_param.get("base64")
+
+            if bytes_base64 is not None:
+                raw_file = RawFile(file=base64.b64decode(bytes_base64)).save()
+
+                del request_param["base64"]
+                request_param["id"] = str(raw_file.id)
+
+    return request
 
 
 @publish_event(Events.REQUEST_STARTED)
