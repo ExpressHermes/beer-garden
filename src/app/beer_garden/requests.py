@@ -13,6 +13,7 @@ import logging
 import re
 import threading
 from builtins import str
+from copy import deepcopy
 from typing import Dict, List, Sequence, Union
 
 import pika.spec
@@ -652,24 +653,34 @@ def process_request(
 
 @publish_event(Events.REQUEST_CREATED)
 def create_request(request: Request) -> Request:
-    request = _convert_request_bytes_base64_to_raw_files(request)
+    request = deepcopy(request)
+    _handle_bytes_parameter_base64(request)
 
     return db.create(request)
 
 
-def _convert_request_bytes_base64_to_raw_files(request: Request) -> Request:
+def _handle_bytes_parameter_base64(request: Request) -> None:
+    """Strips out the "base64" property of any parameters that are of type "bytes".
+    This is done because the "base64" property is only used for transport of the
+    request to remote gardens and is never intended to be persisted as an actual
+    parameter.
+
+    If the target garden for the request is the local garden, a RawFile will be created
+    from the contents of the "base64" property and an "id" field corresponding to the
+    RawFile id will be inserted in place of the "base64". This is the form that the
+    commands being executed from the request expect the "bytes" type parameters to take.
+    """
     for param in request.parameters:
         request_param = request.parameters[param]
         if isinstance(request_param, dict) and request_param.get("type") == "bytes":
             bytes_base64 = request_param.get("base64")
 
             if bytes_base64 is not None:
-                raw_file = RawFile(file=base64.b64decode(bytes_base64)).save()
+                if request.namespace == config.get("garden.name"):
+                    raw_file = RawFile(file=base64.b64decode(bytes_base64)).save()
+                    request_param["id"] = str(raw_file.id)
 
                 del request_param["base64"]
-                request_param["id"] = str(raw_file.id)
-
-    return request
 
 
 @publish_event(Events.REQUEST_STARTED)
