@@ -8,6 +8,7 @@ The request service is responsible for:
 """
 
 import base64
+import gzip
 import json
 import logging
 import re
@@ -677,7 +678,9 @@ def _handle_bytes_parameter_base64(request: Request) -> None:
 
             if bytes_base64 is not None:
                 if request.namespace == config.get("garden.name"):
-                    raw_file = RawFile(file=base64.b64decode(bytes_base64)).save()
+                    raw_file = RawFile(
+                        file=gzip.decompress(base64.b64decode(bytes_base64))
+                    ).save()
                     request_param["id"] = str(raw_file.id)
 
                 del request_param["base64"]

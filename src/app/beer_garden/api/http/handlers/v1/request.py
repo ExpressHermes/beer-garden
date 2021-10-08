@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import base64
+import gzip
 import json
 from asyncio import Event
 from typing import Sequence
@@ -385,19 +386,24 @@ class RequestListAPI(BaseHandler):
             description: Max seconds to wait for request completion. (-1 = wait forever)
             type: float
             default: -1
-          - name: request_form
+          - name: request
             in: formData
-            required: false
-            description: For Requests that include a file upload as a parameter, use
-              this field in place of the "request" parameter. The input should be json
-              formatted per the definition of the "request" parameter, but supplied as
-              a string.
-            type: string
-          - name: bytes_file
+            required: true
+            description: |
+              For multipart/form-data requests (required when uploading a
+              a file as a parameter) this field acts the same as the request (body)
+              parameter and should be formatted per that field's definition.
+            type: object
+          - name: file_upload
             in: formData
             required: false
             type: file
-            description: A file to upload for use as the data for the "bytes" parameter
+            description: |
+              A file to upload for use as input to a "bytes" type request
+              parameter. NOTE: The name of the field in the submitted form data should
+              match the name of the actual "bytes" type field that the command being
+              tasked is expecting. The "file_upload" name is just a stand-in, since
+              the actual expected name will vary for each command.
         consumes:
           - application/json
           - application/x-www-form-urlencoded
@@ -629,17 +635,17 @@ class RequestListAPI(BaseHandler):
 
     def _parse_multipart_form_data(self) -> Request:
         """Generate a Request object from multipart/form-data input"""
-        request_form = self.get_body_argument("request_form")
+        request_form = self.get_body_argument("request")
 
         if request_form is None:
             raise BadRequest(
-                reason="request_form required for multipart/form-data requests"
+                reason="request parameter required for multipart/form-data requests"
             )
 
         try:
             request_form_dict = json.loads(request_form)
         except (json.JSONDecodeError):
-            raise BadRequest(reason="request_form must be a string of valid JSON")
+            raise BadRequest(reason="request parameter must be valid JSON")
 
         self._add_files_to_request(request_form_dict)
 
@@ -677,7 +683,9 @@ class RequestListAPI(BaseHandler):
             else:
                 file_parameters[_file] = {
                     "type": "bytes",
-                    "base64": base64.b64encode(file_contents).decode("ascii"),
+                    "base64": base64.b64encode(gzip.compress(file_contents)).decode(
+                        "ascii"
+                    ),
                 }
 
         request_form_dict["parameters"].update(file_parameters)
