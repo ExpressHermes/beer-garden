@@ -654,30 +654,52 @@ def process_request(
 
 @publish_event(Events.REQUEST_CREATED)
 def create_request(request: Request) -> Request:
+    """Create a database entry (mongo Document based Request object) from a brewtils
+    Request model object. Some transformations happen on a copy of the supplied Request
+    prior to saving it to the database. The returned Request object is derived from this
+    transformed copy, while the input Request object remains unmodified.
+
+    Args:
+        request: The brewtils Request object from which a database entry will be created
+
+    Returns:
+        Request: A brewtils Request model based on the newly created database entry.
+            The parameters of the returned object may have been modified from the
+            during processing of files in "bytes" type parameters.
+    """
     request = deepcopy(request)
-    _handle_bytes_parameter_base64(request)
+    replace_with_raw_file = request.namespace == config.get("garden.name")
+    remove_bytes_parameter_base64(request.parameters, replace_with_raw_file)
 
     return db.create(request)
 
 
-def _handle_bytes_parameter_base64(request: Request) -> None:
+def remove_bytes_parameter_base64(
+    parameters: dict, replace_with_raw_file: bool
+) -> None:
     """Strips out the "base64" property of any parameters that are of type "bytes".
+    Optionally can create a RawFile object from the "base64" and insert a reference
+    to the RawFile.id in its place.
+
     This is done because the "base64" property is only used for transport of the
     request to remote gardens and is never intended to be persisted as an actual
     parameter.
 
-    If the target garden for the request is the local garden, a RawFile will be created
-    from the contents of the "base64" property and an "id" field corresponding to the
-    RawFile id will be inserted in place of the "base64". This is the form that the
-    commands being executed from the request expect the "bytes" type parameters to take.
+    Args:
+       parameters: A dict representing the request parameters
+       replace_with_raw_file: If True, a RawFile will be created from the "base64" and
+           an "id" reference to the RawFile will be inserted in place of "base64".
+
+    Returns:
+        None
     """
-    for param in request.parameters:
-        request_param = request.parameters[param]
+    for param in parameters:
+        request_param = parameters[param]
         if isinstance(request_param, dict) and request_param.get("type") == "bytes":
             bytes_base64 = request_param.get("base64")
 
             if bytes_base64 is not None:
-                if request.namespace == config.get("garden.name"):
+                if replace_with_raw_file:
                     raw_file = RawFile(
                         file=gzip.decompress(base64.b64decode(bytes_base64))
                     ).save()

@@ -15,6 +15,7 @@ from beer_garden.api.http.exceptions import BadRequest
 from beer_garden.db.mongo.models import RawFile
 from beer_garden.errors import UnknownGardenException
 from beer_garden.garden import local_garden
+from beer_garden.requests import remove_bytes_parameter_base64
 
 
 class RequestAPI(BaseHandler):
@@ -481,6 +482,8 @@ class RequestListAPI(BaseHandler):
                 Operation(operation_type="REQUEST_READ", args=[created_request["id"]])
             )
         else:
+            # We don't want to echo back the base64 encoding of and file parameters
+            remove_bytes_parameter_base64(created_request["parameters"], False)
             response = SchemaParser.serialize_request(created_request)
 
         self.set_status(201)
